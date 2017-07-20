@@ -1,0 +1,34 @@
+import socket
+import os
+import threading
+
+ip = input("Please write IP:  ")
+port = input("Please write PORT:  ")
+folder = input("Please write folder name:  ")
+
+
+basedir = folder
+
+
+
+subpath = os.listdir(basedir)
+for subnames in subpath:
+        print(subnames)
+        file = open(basedir + "/" + subnames, "rb")
+        buffersize = os.path.getsize(basedir + "/" + subnames)
+        sock = socket.socket()
+        sock.connect((ip,int(port)))
+        sock.send(subnames.encode())
+        t = True
+        while t:
+            buf = file.read(1024) #.encode()
+            if not buf:
+                sock.close()
+                t = False
+                print("cancel")
+            else:
+                sock.send(buf)
+                print("SEND")
+
+
+print("передано")
