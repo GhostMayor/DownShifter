@@ -1,0 +1,33 @@
+import socket
+
+host = input("Please input your IP")
+port = input("Please input you PORT")
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((host, port))
+s.listen(1)
+while True:
+
+    conn, addr = s.accept()
+    print(addr)
+    header = True
+    fi = ""
+    while header:
+        fi +=  conn.recv(2).decode()
+
+        print(fi)
+        if fi.find(".txt") > -1 or fi.find(".java") > -1 or fi.find(".xml") or fi.find(".png") or fi.find(".css") or fi.find(".js") or fi.find(".html")> -1:
+            print(fi)
+            header = False
+    dest = open(fi, 'w')
+    t = True
+    while t:
+        try:
+            data = conn.recv(1024)
+            dest.write(data.decode("UTF-8"))
+        except: pass
+
+        if not data:
+            print('cancel file')
+            t = False
+            dest.close()
+            conn.close()
