@@ -2,33 +2,86 @@ import socket
 import os
 import threading
 
-ip = input("Please write IP:  ")
-port = input("Please write PORT:  ")
-folder = input("Please write folder name:  ")
+global ip
+global port
+global folder
+global _work
+_work = True
 
+def SendAllFile():
+    basedir = folder
+    subpath = os.listdir(basedir)
+    for subnames in subpath:
+            print(subnames)
+            file = open(basedir + "/" + subnames, "rb")
+            buffersize = os.path.getsize(basedir + "/" + subnames)
+            sock = socket.socket()
+            sock.connect((ip,port))
+            sock.send(subnames.encode())
+            t = True
+            while t:
+                buf = file.read(1024) #.encode()
+                if not buf:
+                    sock.close()
+                    t = False
+                    print("cancel")
+                else:
+                    sock.send(buf)
+    print("передано")
 
-basedir = folder
-
-
-
-subpath = os.listdir(basedir)
-for subnames in subpath:
-        print(subnames)
-        file = open(basedir + "/" + subnames, "rb")
-        buffersize = os.path.getsize(basedir + "/" + subnames)
-        sock = socket.socket()
-        sock.connect((ip,int(port)))
-        sock.send(subnames.encode())
+# Таблица команд
+#  комманда , размер заголовка , размер всего остального файла
+# 0x00
+# 0x01
+#
+def ReciveAllFile():
+    sock = socket.socket()
+    sock.connect((ip,port))
+    print("socket")
+    _h = bytearray()
+    _h.append(0x00)
+    _h.append(0x00)
+    sock.send(_h)
+    #print(sock.recv(6))
+    print("header sending")
+    _recive = True
+    while _recive:
+        _file = sock.recv(3)
+        print(_file)
+        size_head = _file[1]
+        print(size_head)
+        _head_file = sock.recv(int(size_head))
+        _head = _head_file.decode("UTF-8")#sock.recv(int(_head_file)).decode("UTF-8")
+        print(_head)
+        file = open(_head, "w")
         t = True
+        print("recive file")
         while t:
-            buf = file.read(1024) #.encode()
-            if not buf:
-                sock.close()
+            try:
+                data = sock.recv(2)
+                file.write(data.decode("UTF-8"))
+            except: pass
+            if not data:
+                print('cancel file - ' + _head)
+                file.close()
                 t = False
-                print("cancel")
-            else:
-                sock.send(buf)
-                print("SEND")
+    print("All Done")
 
+def event(command):
+    if command == "sendall":
+        send = threading.Thread(target=SendAllFile)
+        send.run()
+    if command == "stop":
+        _work = False
+    if command == "reciveall":
+        recive = threading.Thread(target=ReciveAllFile)
+        recive.run()
 
-print("передано")
+if __name__ == "__main__":
+    ip = "192.168.1.33" #input("Please write IP:  ")
+    port = 5001 # int(input("Please write PORT:  "))
+    folder = "testfolder" #input("Please write folder name:  ")
+    while _work:
+        command = input("your command - ")
+        event(command)
+
