@@ -1,24 +1,53 @@
 import socket
+import threading
+import os
 
-host = input("Please input your IP")
-port = input("Please input you PORT")
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((host, port))
-s.listen(1)
-while True:
+def SendAllFile(conn,addr):
+    basedir = "content"
+    subpath = os.listdir(basedir)
+    print("Sending All files")
+    for subnames in subpath:
+            print(subnames)
+            file = open(basedir + "/" + subnames, "rb")
+            buffersize = os.path.getsize(basedir + "/" + subnames)
+            #conn.send(subnames.encode())
+            _sizeheader = subnames.__len__()
+            _h = bytearray()
+            _h.append(0x00)
+            _h.append(_sizeheader)
+            conn.send(_h)
+            conn.send(subnames.encode())
+            t = True
+            while t:
+                buf = file.read(1024) #.encode()
+                if not buf:
+                    t = False
+                    print("cancel")
+                else:
+                    conn.send(buf)
+    print("All files Send")
 
-    conn, addr = s.accept()
+
+
+
+
+
+def Connect(conn,addr):
     print(addr)
     header = True
     fi = ""
     while header:
-        fi +=  conn.recv(2).decode()
+        rc = conn.recv(2)
+        if rc[0] == 0x00 and rc[1] == 0x00:
+            SendAllFile(conn,addr)
+            return
+        fi +=  rc.decode("UTF-8")
 
         print(fi)
-        if fi.find(".txt") > -1 or fi.find(".java") > -1 or fi.find(".xml") or fi.find(".png") or fi.find(".css") or fi.find(".js") or fi.find(".html")> -1:
+        if fi.find(".txt") > -1 or fi.find(".java") > -1 or fi.find(".xml") > -1 or fi.find(".png") > -1 or fi.find(".css") > -1 or fi.find(".js") > -1 or fi.find(".html") > -1:
             print(fi)
             header = False
-    dest = open(fi, 'w')
+    dest = open("content/" + fi, 'w')
     t = True
     while t:
         try:
@@ -31,3 +60,23 @@ while True:
             t = False
             dest.close()
             conn.close()
+
+
+def Start(host,port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((host, port))
+    s.listen(1)
+    while True:
+        try:
+            conn, addr = s.accept()
+            Connect(conn,addr)
+        except Exception as e:
+            print("Err " + e)
+
+
+if  __name__ == "__main__":
+
+        host = "192.168.1.33" #input("Please input your IP")
+        port = 5001 #int(input("Please input you PORT"))
+        _Server = threading.Thread(target=Start,args=(host,port))
+        _Server.run()
